@@ -72,6 +72,18 @@ flowchart LR
 | Rango de fechas | `from` inclusivo y `to` exclusivo | Ambos inclusivos | Coincide con la consulta de agregación y evita contar dos veces el borde. |
 | Id de los logs | Se devuelve como string | Número | `BIGSERIAL` puede superar el entero seguro de JavaScript. |
 
+## Integración con IA
+
+| Decisión | Elegí | Descarté | Por qué |
+|---|---|---|---|
+| Entrada del análisis | Lista de ids de logs | Filtros (servicio, fechas) | Es explícito y simple. Para analizar por filtro, el cliente primero lista los logs con `GET /api/logs`. |
+| Respuesta del LLM | Se trata como `unknown` y se valida con Zod | Confiar en su formato | Un LLM puede devolver otra estructura; si no cumple, el análisis queda en `failed`. |
+| Timeout | `Promise.race` con `LLM_TIMEOUT_MS` | Sin límite | Evita análisis colgados en `pending`. Limitación: no cancela la llamada al LLM, solo deja de esperarla. |
+| Guardado | Transacción para el análisis y sus logs | Dos inserts sueltos | Todo o nada: no quedan análisis sin logs. |
+| Errores del LLM | Se guarda un código corto en `error` y el detalle va a la consola | Guardar el mensaje original | No se filtran datos internos del proveedor en la API. |
+| Mock | Categoriza por palabras clave y analiza los logs recibidos | Un texto fijo | La demo se ve creíble y los patrones del seed se detectan. |
+| Construcción de la app | `createApp(llm)` | App global | Los tests inyectan un LLM falso (lento o con formato inválido). |
+
 ## Supuestos
 
 - Los logs se ingestan de a uno (`POST /api/logs`).
@@ -82,3 +94,5 @@ flowchart LR
 - Los niveles válidos son `DEBUG`, `INFO`, `WARN` y `ERROR`.
 
 ## Limitaciones conocidas
+
+- Si el servidor se reinicia mientras hay un análisis `pending`, queda en ese estado para siempre (no hay cola persistente ni reintentos).
