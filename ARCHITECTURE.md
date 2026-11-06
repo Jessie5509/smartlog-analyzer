@@ -60,12 +60,25 @@ flowchart LR
 | Índices | Compuestos `(service, logged_at)` y `(level, logged_at)` | Sin índices o uno por columna | Cubren los filtros de `GET /api/logs` y las agregaciones por rango de fechas. |  |     |
 | Seed repetible | Bloque `DO` que inserta solo si `logs` está vacía | Seed sin guardia o `TRUNCATE` previo | Correrlo dos veces no duplica datos ni pisa logs reales. |
 
+## API
+
+| Decisión | Elegí | Descarté | Por qué |
+|---|---|---|---|
+| Estructura | Rutas, servicios y esquemas separados | Todo en los handlers | Las rutas solo validan y responden; el SQL se prueba por separado. |
+| Validación | Zod en el borde de cada endpoint | Validar dentro de los servicios | Los datos inválidos se rechazan antes de tocar la base. |
+| Errores | Un manejador central con formato único | `try/catch` en cada ruta | Respuestas consistentes y sin filtrar detalles internos en los `500`. |
+| Códigos HTTP | `400` por datos inválidos, `404` si no existe, `422` si es válido pero no procesable (por ejemplo, más de 200 logs), `503` si la base no responde | Usar `400` para todo | Cada código dice qué falló. |
+| Paginación | `limit` y `offset` con `total` | Paginación por cursor | Más simple para un prototipo; el cursor rinde mejor con millones de filas y queda como mejora. |
+| Rango de fechas | `from` inclusivo y `to` exclusivo | Ambos inclusivos | Coincide con la consulta de agregación y evita contar dos veces el borde. |
+| Id de los logs | Se devuelve como string | Número | `BIGSERIAL` puede superar el entero seguro de JavaScript. |
+
 ## Supuestos
 
-- Los logs llegan de a uno (`POST /api/logs`); el tamaño máximo de un análisis es de N logs para acotar el prompt.
-- No hay autenticación (es una herramienta interna de prototipo).
-- Máximo de logs por análisis: 200 es un valor razonable. Si mandan más, la API responde 422.
-- Formato de error: una estructura única para todos los errores, por ejemplo { "error": { "code": "VALIDATION_ERROR", "message": "...", "details": [...] } }.
-- Paginación en GET /api/logs: con limit (por defecto 50, máximo 200) y offset.
+- Los logs se ingestan de a uno (`POST /api/logs`).
+- Un análisis acepta hasta 200 logs, para acotar el tamaño del prompt. Si se envían más, la API responde `422`.
+- Sin autenticación.
+- Todos los errores usan un formato único: `{ "error": { "code": "VALIDATION_ERROR", "message": "...", "details": [...] } }`.
+- `GET /api/logs` pagina con `limit` (50 por defecto, máximo 200) y `offset`.
+- Los niveles válidos son `DEBUG`, `INFO`, `WARN` y `ERROR`.
 
 ## Limitaciones conocidas
