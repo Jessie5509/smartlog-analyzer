@@ -58,6 +58,7 @@ flowchart LR
 | Identificadores | `BIGSERIAL` en `logs`, UUID en `analyses` | Enteros o UUID en todas las tablas | Los logs son muchos y se insertan seguido; el id del análisis se expone en la API y no debe ser adivinable. |
 | Estado del análisis | `status` con `pending`, `completed` y `failed` | Booleano de terminado | Soporta el análisis asincrónico y distingue una falla de un análisis en curso. |
 | Índices | Compuestos `(service, logged_at)` y `(level, logged_at)` | Sin índices o uno por columna | Cubren los filtros de `GET /api/logs` y las agregaciones por rango de fechas. |  |     |
+| Seed repetible | Bloque `DO` que inserta solo si `logs` está vacía | Seed sin guardia o `TRUNCATE` previo | Correrlo dos veces no duplica datos ni pisa logs reales. |
 
 ## Supuestos
 
