@@ -64,5 +64,8 @@ flowchart LR
 
 - Los logs llegan de a uno (`POST /api/logs`); el tamaño máximo de un análisis es de N logs para acotar el prompt.
 - No hay autenticación (es una herramienta interna de prototipo).
+- Máximo de logs por análisis: 200 es un valor razonable. Si mandan más, la API responde 422.
+- Formato de error: una estructura única para todos los errores, por ejemplo { "error": { "code": "VALIDATION_ERROR", "message": "...", "details": [...] } }.
+- Paginación en GET /api/logs: con limit (por defecto 50, máximo 200) y offset.
 
 ## Limitaciones conocidas
