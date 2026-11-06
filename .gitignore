@@ -1,0 +1,22 @@
+# Dependencias y build
+node_modules/
+dist/
+coverage/
+
+# Variables de entorno
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+npm-debug.log*
+
+# Editor y sistema operativo
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Datos locales de Docker
+pgdata/
