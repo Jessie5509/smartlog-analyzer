@@ -102,7 +102,39 @@ flowchart LR
 - `GET /api/logs` pagina con `limit` (50 por defecto, máximo 200) y `offset`.
 - Los niveles válidos son `DEBUG`, `INFO`, `WARN` y `ERROR`.
 
+## Despliegue
+
+| Decisión | Elegí | Descarté | Por qué |
+|---|---|---|---|
+| Imagen de la app | Build en dos etapas (compilar y correr) | Una sola etapa | La imagen final no lleva TypeScript ni dependencias de desarrollo. |
+| Usuario del contenedor | `node` (sin privilegios) | `root` | Si la app se compromete, tiene menos permisos. |
+| Orden de arranque | `depends_on` con healthcheck de la base | Reintentos de conexión en el código | Es simple y la app no arranca antes de que la base esté lista. |
+| Migraciones | Se montan en `/docker-entrypoint-initdb.d` | Un comando de migración aparte | Un solo `docker compose up`. Limitación: solo corren al crear la base; para aplicar cambios hay que recrear el volumen. |
+| Configuración | Variables de entorno con valores por defecto en el compose | Exigir un `.env` | El proyecto levanta sin pasos extra y no hay secretos en el repo. |
+
+### Puertos, red y variables
+
+**Puertos**
+
+| Servicio | Puerto en el contenedor | Puerto en tu máquina |
+|---|---|---|
+| app | 3000 | `PORT` (3000 por defecto) |
+| db | 5432 | 5432 (para tests y desarrollo local) |
+
+**Red:** Compose crea una red interna donde los servicios se encuentran por nombre. La app se conecta a la base con el host `db`.
+
+**Variables de entorno**
+
+| Variable | Qué hace | Por defecto |
+|---|---|---|
+| `PORT` | Puerto publicado de la API en tu máquina | `3000` |
+| `DATABASE_URL` | Conexión a PostgreSQL. En Docker la fija el compose; en desarrollo local va en el `.env` | (sin valor) |
+| `LLM_PROVIDER` | Cliente de IA: `mock` | `mock` |
+| `LLM_API_KEY` | Clave del proveedor real (no hace falta con `mock`) | vacío |
+| `LLM_TIMEOUT_MS` | Tiempo máximo de espera al LLM | `10000` |
+
 ## Limitaciones conocidas
 
 - Si el servidor se reinicia mientras hay un análisis `pending`, queda en ese estado para siempre (no hay cola persistente ni reintentos).
 - No hay tests del caso "base de datos caída" en `/api/health` ni de concurrencia entre análisis simultáneos.
+- Las credenciales de PostgreSQL (`smartlog`/`smartlog`) son de desarrollo; en un entorno real irían en un gestor de secretos.
