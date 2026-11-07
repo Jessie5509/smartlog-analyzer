@@ -28,8 +28,8 @@ flowchart LR
 
 1. Los servicios envían logs con `POST /api/logs`. Se validan y se guardan en PostgreSQL.
 2. `GET /api/logs` lista los logs con filtros (servicio, nivel, rango de fechas) y paginación.
-3. `POST /api/logs/analyze` recibe un filtro o un conjunto de ids, crea un análisis en estado `pending` y responde `202` con su id.
-4. En segundo plano, el servicio carga los logs, llama al LLM con un timeout, valida la respuesta y guarda el resultado (`completed` o `failed`).
+3. `POST /api/logs/analyze` recibe una lista de ids de logs (máximo 200), verifica que existan, crea un análisis en estado `pending` y responde `202` con su id.
+4. En segundo plano, el servicio llama al LLM con un timeout, valida la respuesta y guarda el resultado (`completed` o `failed`).
 5. `GET /api/analysis/{id}` devuelve el estado y el resultado.
 
 ## Decisiones técnicas
@@ -101,6 +101,7 @@ flowchart LR
 - Todos los errores usan un formato único: `{ "error": { "code": "VALIDATION_ERROR", "message": "...", "details": [...] } }`.
 - `GET /api/logs` pagina con `limit` (50 por defecto, máximo 200) y `offset`.
 - Los niveles válidos son `DEBUG`, `INFO`, `WARN` y `ERROR`.
+- Para analizar logs por filtro (servicio o fechas), el cliente primero los lista con `GET /api/logs` y luego envía los ids a `analyze`.
 
 ## Despliegue
 
@@ -130,7 +131,6 @@ flowchart LR
 | `PORT` | Puerto publicado de la API en tu máquina | `3000` |
 | `DATABASE_URL` | Conexión a PostgreSQL. En Docker la fija el compose; en desarrollo local va en el `.env` | (sin valor) |
 | `LLM_PROVIDER` | Cliente de IA: `mock` | `mock` |
-| `LLM_API_KEY` | Clave del proveedor real (no hace falta con `mock`) | vacío |
 | `LLM_TIMEOUT_MS` | Tiempo máximo de espera al LLM | `10000` |
 
 ## Limitaciones conocidas
