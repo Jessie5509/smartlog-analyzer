@@ -84,6 +84,15 @@ flowchart LR
 | Mock | Categoriza por palabras clave y analiza los logs recibidos | Un texto fijo | La demo se ve creíble y los patrones del seed se detectan. |
 | Construcción de la app | `createApp(llm)` | App global | Los tests inyectan un LLM falso (lento o con formato inválido). |
 
+## Tests
+
+| Decisión | Elegí | Descarté | Por qué |
+|---|---|---|---|
+| Base para los tests | Base `smartlog_test` en el mismo contenedor, recreada en cada corrida con la migración | Mockear la base o usar la de desarrollo | Prueba el SQL y la migración de verdad sin tocar los datos de desarrollo. |
+| Tests de integración | Supertest sobre `createApp()`, sin abrir puertos | Levantar el servidor y usar `fetch` | Más rápido y sin conflictos de puertos. |
+| LLM en los tests | Clientes falsos inyectados en `createApp(llm)` | Mockear módulos | Permite simular respuesta válida, formato inesperado, timeout y errores. |
+| Aislamiento | Se vacían las tablas antes de cada test y los archivos corren de a uno | Tests en paralelo | Los archivos comparten una base y los tests no deben depender entre sí. |
+
 ## Supuestos
 
 - Los logs se ingestan de a uno (`POST /api/logs`).
@@ -96,3 +105,4 @@ flowchart LR
 ## Limitaciones conocidas
 
 - Si el servidor se reinicia mientras hay un análisis `pending`, queda en ese estado para siempre (no hay cola persistente ni reintentos).
+- No hay tests del caso "base de datos caída" en `/api/health` ni de concurrencia entre análisis simultáneos.
